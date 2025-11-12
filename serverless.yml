@@ -1,38 +1,62 @@
-org: geraldocolchado
-service: api-web-scraping
+service: igp-sismos
+frameworkVersion: '4'
+
+org: ljosue            # tu organización en Serverless Dashboard
+app: igp-sismos-app    # puedes cambiar el nombre del app si ya usas otro
 
 provider:
   name: aws
-  runtime: python3.12
-  # Default memory size for functions (default: 1024MB)
-  memorySize: 1024
-  timeout: 30
+  runtime: python3.11
+  region: us-east-1
+  stage: dev
+  # Usa tu rol administrado existente
   iam:
-    role: arn:aws:iam::606646193182:role/LabRole
+    role: arn:aws:iam::529168894975:role/LabRole
+  environment:
+    DDB_TABLE: TablaSismosIGP
 
 functions:
-  scrape_table:
-    handler: scrap_table.lambda_handler  # Asegúrarse de que el nombre del archivo y la función coincidan
-    package:
-      include:
-        - ./**  # Incluir todo el contenido del directorio
+  ingestar:
+    handler: handler_igp.lambda_ingestar
+    description: "Obtiene los 10 últimos sismos del IGP y los guarda en DynamoDB"
+    timeout: 30
+    memorySize: 256
     events:
-      - http:
-          path: /scrape/table
+      - httpApi:
+          path: /igp/sismos/ingestar
           method: get
-          cors: true
-          integration: lambda
+      # Habilita si quieres ingestar automáticamente cada 10 minutos
+      # - schedule: rate(10 minutes)
+
+  listar:
+    handler: handler_igp.lambda_listar
+    description: "Lista los 10 últimos sismos almacenados en DynamoDB"
+    timeout: 15
+    memorySize: 256
+    events:
+      - httpApi:
+          path: /igp/sismos/listar
+          method: get
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    layer: false
+    slim: true
 
 resources:
   Resources:
-    TablaWebScrapping:
+    TablaSismosIGP:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: TablaWebScrapping
+        TableName: TablaSismosIGP
+        BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: code
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: code
             KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
