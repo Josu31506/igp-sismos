@@ -1,15 +1,14 @@
 service: igp-sismos
 frameworkVersion: '4'
 
-org: ljosue            # tu organización en Serverless Dashboard
-app: igp-sismos-app    # puedes cambiar el nombre del app si ya usas otro
+org: ljosue
+app: igp-sismos-app
 
 provider:
   name: aws
   runtime: python3.11
   region: us-east-1
   stage: dev
-  # Usa tu rol administrado existente
   iam:
     role: arn:aws:iam::529168894975:role/LabRole
   environment:
@@ -18,19 +17,16 @@ provider:
 functions:
   ingestar:
     handler: handler_igp.lambda_ingestar
-    description: "Obtiene los 10 últimos sismos del IGP y los guarda en DynamoDB"
     timeout: 30
     memorySize: 256
     events:
       - httpApi:
           path: /igp/sismos/ingestar
           method: get
-      # Habilita si quieres ingestar automáticamente cada 10 minutos
-      # - schedule: rate(10 minutes)
+      # - schedule: rate(10 minutes)  # opcional
 
   listar:
     handler: handler_igp.lambda_listar
-    description: "Lista los 10 últimos sismos almacenados en DynamoDB"
     timeout: 15
     memorySize: 256
     events:
@@ -44,8 +40,8 @@ plugins:
 custom:
   pythonRequirements:
     dockerizePip: true
-    layer: false
     slim: true
+    layer: false
 
 resources:
   Resources:
